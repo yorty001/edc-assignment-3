@@ -26,18 +26,30 @@ public class GpsGUI {
 	public static void main(String[] args) {
 		GpsService serv = new GpsService();
         Stream<GpsEvent>[] streams = serv.getEventStreams();
+        
+        
+        Stream<GpsEvent> allEvents = streams[0];
+        for (int i = 1;  i < streams.length; i++) {
+        	allEvents = allEvents.merge(streams[i], (a, b) -> b);
+        }
+
+        Cell<String> latestEventCell = allEvents.map(ev -> ev.name + "," + ev.latitude + "," + ev.longitude + "," + ev.altitude).hold("waiting...");
+        
+        SLabel updateLabel = new SLabel(latestEventCell);
            
         JFrame frame = new JFrame("GPS");
-        frame.setLayout(new GridLayout(5,2));
-        frame.setSize(600,400);
+        JPanel trackersPanel = new JPanel(new GridLayout(5,2));
+        
         
         for(Stream<GpsEvent> s : streams) {
-        	frame.add(trackerPanel(s));
+        	trackersPanel.add(trackerPanel(s));
         }
         
+        frame.setSize(600,400);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.add(trackersPanel, BorderLayout.CENTER);
+        frame.add(updateLabel, BorderLayout.SOUTH);
         frame.setVisible(true);
-
 	}
 
 }
