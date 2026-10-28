@@ -1,8 +1,9 @@
-
+import java.util.Timer;
 import nz.sodium.*;
 import swidgets.*;
 import javax.swing.*;
 import java.awt.*;
+import java.util.TimerTask;
 
 public class GpsGUI {
 	
@@ -33,7 +34,19 @@ public class GpsGUI {
         	allEvents = allEvents.merge(streams[i], (a, b) -> b);
         }
 
-        Cell<String> latestEventCell = allEvents.map(ev -> ev.name + "," + ev.latitude + "," + ev.longitude + "," + ev.altitude).hold("waiting...");
+        Stream<String> eventText = allEvents.map(ev -> ev.name + "," + ev.latitude + "," + ev.longitude + "," +ev.altitude );
+        StreamSink<String> clearSink = new StreamSink<>();
+        Cell<String> lastText = eventText.hold("");
+        Timer timer = new Timer();
+        eventText.listen(text -> timer.schedule(new TimerTask(){
+            public void run() { clearSink.send(text); }
+        }, 3000));
+
+        Stream<String> clears = clearSink
+            .snapshot(lastText, (scheduled, current) -> scheduled.equals(current) ? "" : null)
+            .filter(x -> x != null);
+
+        Cell<String> latestEventCell = eventText.merge(clears, (a, b) -> b).hold("waiting...");
         
         SLabel updateLabel = new SLabel(latestEventCell);
            
