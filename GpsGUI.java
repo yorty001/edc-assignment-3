@@ -25,11 +25,11 @@ public class GpsGUI {
 	}
 
     private static String eventToText(GpsEvent ev) {
-        return ev.name + " , " + ev.latitude + " , " +ev.longitude + " , " + ev.altitude;
+        return ev.name + "," + ev.latitude + "," +ev.longitude + "," + ev.altitude;
     }
 
     private static Stream<GpsEvent> inRange(Stream<GpsEvent> s, Cell<double[]> range) {
-        return s.snapshot(range, (ev, r) -> inRange(ev.latitude >= r[0] && ev.latitude <= r[1] && ev.longitude >= r[2] && ev.) ? ev : null).filter(x -> x != null);
+        return s.snapshot(range, (ev, r) -> ev.latitude >= r[0] && ev.latitude <= r[1] && ev.longitude >= r[2] && ev.longitude <= r[3] ? ev : null).filter(x -> x != null);
         }
 
 	public static void main(String[] args) {
@@ -42,7 +42,7 @@ public class GpsGUI {
         	allEvents = allEvents.merge(streams[i], (a, b) -> b);
         }
 
-        Stream<String> eventText = allEvents.map(ev -> ev.name + "," + ev.latitude + "," + ev.longitude + "," +ev.altitude );
+        Stream<String> eventText = allEvents.map(ev -> eventToText(ev));
         StreamSink<String> clearSink = new StreamSink<>();
         Cell<String> lastText = eventText.hold("");
         Timer timer = new Timer();
@@ -88,13 +88,17 @@ public class GpsGUI {
                 (click, a, b, c, d) -> new double[] {Double.parseDouble(a), Double.parseDouble(b), Double.parseDouble(c), Double.parseDouble(d)} ).hold(new double [] {-90, 90, -180, 180});
 
         Cell<String> filteredCell = inRange(allEvents, rangeCell).map(ev -> eventToText(ev)).hold("waiting...");
-        SLabel filteredCell = new SLabel(filteredCell);
+        SLabel filteredLabel = new SLabel(filteredCell);
         
         Cell<String> rangeTextCell = rangeCell.map(r -> "Lat: " + r[0] + " to " + r[1] + "  Long: " + r[2] + " to " + r[3]);
         SLabel rangeLabel = new SLabel(rangeTextCell);
 
         JPanel trackersPanel = new JPanel(new GridLayout(5,2));
-        
+        JPanel bottomPanel = new JPanel(new GridLayout(0, 1));
+        bottomPanel.add(updateLabel);
+        bottomPanel.add(rangeLabel);
+        bottomPanel.add(filteredLabel);
+
         
         for(Stream<GpsEvent> s : streams) {
         	trackersPanel.add(trackerPanel(s));
@@ -103,7 +107,7 @@ public class GpsGUI {
         frame.setSize(600,400);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.add(trackersPanel, BorderLayout.CENTER);
-        frame.add(updateLabel, BorderLayout.SOUTH);
+        frame.add(bottomPanel, BorderLayout.SOUTH);
         frame.setVisible(true);
 	}
 
