@@ -23,6 +23,7 @@ public class GpsGUI {
 		panel.add(numLabel);
         panel.add(latLabel);
         panel.add(longLabel);
+        panel.add(distLabel);
 		return panel;
 	}
 
@@ -73,6 +74,24 @@ public class GpsGUI {
     	
     }
     
+    private static Cell<String> textWithClear(Stream<String> texts) {
+    	StreamSink<String> clearSink = new StreamSink<>();
+        Cell<String> lastText = texts.hold("");
+        Timer timer = new Timer();
+        texts.listen(text -> timer.schedule(new TimerTask(){
+            public void run() { clearSink.send(text); }
+        }, 3000));
+
+        Stream<String> clears = clearSink
+            .snapshot(lastText, (scheduled, current) -> scheduled.equals(current) ? "" : null)
+            .filter(x -> x != null);
+
+        Cell<String> latestEventCell = texts.merge(clears, (a, b) -> b).hold("waiting...");
+    	
+    	return latestEventCell;
+    	
+    }
+    
 	public static void main(String[] args) {
 		GpsService serv = new GpsService();
         Stream<GpsEvent>[] streams = serv.getEventStreams();
@@ -84,20 +103,9 @@ public class GpsGUI {
         }
 
         Stream<String> eventText = allEvents.map(ev -> eventToText(ev));
-        StreamSink<String> clearSink = new StreamSink<>();
-        Cell<String> lastText = eventText.hold("");
-        Timer timer = new Timer();
-        eventText.listen(text -> timer.schedule(new TimerTask(){
-            public void run() { clearSink.send(text); }
-        }, 3000));
-
-        Stream<String> clears = clearSink
-            .snapshot(lastText, (scheduled, current) -> scheduled.equals(current) ? "" : null)
-            .filter(x -> x != null);
-
-        Cell<String> latestEventCell = eventText.merge(clears, (a, b) -> b).hold("waiting...");
         
-        SLabel updateLabel = new SLabel(latestEventCell);
+        
+        SLabel updateLabel = new SLabel(textWithClear(eventText));
            
         STextField latMin = new STextField("-90");
         STextField latMax = new STextField("90");
@@ -128,7 +136,7 @@ public class GpsGUI {
             .snapshot(latMin.text, latMax.text, longMin.text, longMax.text,
                 (click, a, b, c, d) -> new double[] {Double.parseDouble(a), Double.parseDouble(b), Double.parseDouble(c), Double.parseDouble(d)} ).hold(new double [] {-90, 90, -180, 180});
 
-        Cell<String> filteredCell = inRange(allEvents, rangeCell).map(ev -> eventToText(ev)).hold("waiting...");
+        Cell<String> filteredCell = textWithClear(inRange(allEvents, rangeCell).map(ev -> eventToText(ev)));
         SLabel filteredLabel = new SLabel(filteredCell);
         
         Cell<String> rangeTextCell = rangeCell.map(r -> "Lat: " + r[0] + " to " + r[1] + "  Long: " + r[2] + " to " + r[3]);
