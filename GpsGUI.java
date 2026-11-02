@@ -34,10 +34,18 @@ public class GpsGUI {
     	
     private static double distanceMetres(GpsEvent a, GpsEvent b) {
     	double metresPerDegree = 111320;
-    	double dy = (b.latitude - a.longitude) * metresPerDegree;
-    	double dx = (b.latitude - a.longitude) * metresPerDegree * Math.cos(Math.toRadians(b.latitude));
+    	double dy = (b.latitude - a.latitude) * metresPerDegree;
+    	double dx = (b.longitude - a.longitude) * metresPerDegree * Math.cos(Math.toRadians(b.latitude));
     	double dz = b.altitude - a.altitude;
     	return Math.sqrt(dx * dx + dy*dy + dz*dz);
+    }
+    
+    private static Stream<Double> segments(Stream<GpsEvent> s, Cell<double[]> range) {
+		Stream<GpsEvent> metres = inRange(s, range).map(ev -> new GpsEvent(ev.name, ev.latitude, ev.longitude, ev.altitude * 0.3048));
+		Cell<GpsEvent> previous = metres.hold(null);
+		return metres.snapshot(previous, (cur, prev) -> prev == null ? null : distanceMetres(prev, cur))
+				.filter(x -> x != null);
+    	
     }
     
 	public static void main(String[] args) {
