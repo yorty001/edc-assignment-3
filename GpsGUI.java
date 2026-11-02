@@ -1,3 +1,4 @@
+import java.util.ArrayList;
 import java.util.Timer;
 import nz.sodium.*;
 import swidgets.*;
@@ -8,7 +9,7 @@ import java.util.TimerTask;
 public class GpsGUI {
 	
 	
-	private static JPanel trackerPanel(Stream<GpsEvent> s) {     
+	private static JPanel trackerPanel(Stream<GpsEvent> s, Cell<double[]> range) {     
         Cell<String> numCell = s.map(ev -> ev.name).hold("waiting...");
         Cell<String> latCell = s.map(ev -> "Lat: " + ev.latitude).hold("waiting...");
         Cell<String> longCell = s.map(ev -> "Long: " + ev.longitude).hold("waiting...");
@@ -16,7 +17,8 @@ public class GpsGUI {
         SLabel numLabel = new SLabel(numCell);
         SLabel latLabel = new SLabel(latCell);
         SLabel longLabel = new SLabel(longCell);
-		
+		SLabel distLabel = new SLabel(distanceCell (s, range));
+		        
 		JPanel panel = new JPanel();
 		panel.add(numLabel);
         panel.add(latLabel);
@@ -45,6 +47,29 @@ public class GpsGUI {
 		Cell<GpsEvent> previous = metres.hold(null);
 		return metres.snapshot(previous, (cur, prev) -> prev == null ? null : distanceMetres(prev, cur))
 				.filter(x -> x != null);
+    	
+    }
+    
+    public static Cell<String> distanceCell(Stream<GpsEvent> s, Cell<double[]> range) {
+		Stream<Double> segs = segments(s, range);
+		
+		Cell<ArrayList<double[]>> recent = segs.accum(new ArrayList<double[]>(), (seg, list) -> {
+			ArrayList<double[]> next = new ArrayList<>(list);
+			long now = System.currentTimeMillis();
+			next.add(new double[] {now, seg});
+			next.removeIf(t -> t[0] < now - (5 * 60 * 1000));
+			return next;
+		});
+    	
+    	
+    	return recent.map(list -> {
+    		double total = 0;
+    		for(double[] e : list) {
+    			total += e[1];
+    		}
+    		long rounded = (long) Math.ceil(total);
+    		return "Dist: " + rounded + "m";
+    	});
     	
     }
     
@@ -117,7 +142,7 @@ public class GpsGUI {
 
         
         for(Stream<GpsEvent> s : streams) {
-        	trackersPanel.add(trackerPanel(s));
+        	trackersPanel.add(trackerPanel(s, rangeCell));
         }
         
         frame.setSize(600,400);
