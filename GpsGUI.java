@@ -31,7 +31,15 @@ public class GpsGUI {
     private static Stream<GpsEvent> inRange(Stream<GpsEvent> s, Cell<double[]> range) {
         return s.snapshot(range, (ev, r) -> ev.latitude >= r[0] && ev.latitude <= r[1] && ev.longitude >= r[2] && ev.longitude <= r[3] ? ev : null).filter(x -> x != null);
         }
-
+    	
+    private static double distanceMetres(GpsEvent a, GpsEvent b) {
+    	double metresPerDegree = 111320;
+    	double dy = (b.latitude - a.longitude) * metresPerDegree;
+    	double dx = (b.latitude - a.longitude) * metresPerDegree * Math.cos(Math.toRadians(b.latitude));
+    	double dz = b.altitude - a.altitude;
+    	return Math.sqrt(dx * dx + dy*dy + dz*dz);
+    }
+    
 	public static void main(String[] args) {
 		GpsService serv = new GpsService();
         Stream<GpsEvent>[] streams = serv.getEventStreams();
