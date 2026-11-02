@@ -17,13 +17,17 @@ public class GpsGUI {
         SLabel numLabel = new SLabel(numCell);
         SLabel latLabel = new SLabel(latCell);
         SLabel longLabel = new SLabel(longCell);
-		SLabel distLabel = new SLabel(distanceCell (s, range));
 		        
-		JPanel panel = new JPanel();
+		JPanel panel = new JPanel(new GridLayout(0, 1));
+		panel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
+		
+		numLabel.setFont(numLabel.getFont().deriveFont(Font.BOLD, 20f));
+		latLabel.setFont(latLabel.getFont().deriveFont(16f));
+		longLabel.setFont(longLabel.getFont().deriveFont(16f));
+		
 		panel.add(numLabel);
         panel.add(latLabel);
         panel.add(longLabel);
-        panel.add(distLabel);
 		return panel;
 	}
 
@@ -51,7 +55,7 @@ public class GpsGUI {
     	
     }
     
-    public static Cell<String> distanceCell(Stream<GpsEvent> s, Cell<double[]> range) {
+    private static Cell<String> distanceCell(Stream<GpsEvent> s, Cell<double[]> range) {
 		Stream<Double> segs = segments(s, range);
 		
 		Cell<ArrayList<double[]>> recent = segs.accum(new ArrayList<double[]>(), (seg, list) -> {
@@ -92,6 +96,24 @@ public class GpsGUI {
     	
     }
     
+    private static JPanel distancePanel(Stream<GpsEvent> s, Cell<double[]> range) {
+    	Cell<String> numCell = s.map(ev -> ev.name).hold("waiting...");
+        
+        SLabel numLabel = new SLabel(numCell);
+        SLabel distLabel = new SLabel(distanceCell(s, range));
+        
+		JPanel panel = new JPanel(new GridLayout(0, 1));
+		panel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
+		
+		panel.add(numLabel);
+        panel.add(distLabel);
+        numLabel.setFont(numLabel.getFont().deriveFont(Font.BOLD, 20f));
+        distLabel.setFont(distLabel.getFont().deriveFont(16f));
+		return panel;
+    	
+    }
+    
+    
 	public static void main(String[] args) {
 		GpsService serv = new GpsService();
         Stream<GpsEvent>[] streams = serv.getEventStreams();
@@ -130,7 +152,6 @@ public class GpsGUI {
         controlPanel.add(setButton);
 
         JFrame frame = new JFrame("GPS");
-        frame.add(controlPanel, BorderLayout.NORTH);
 
         Cell<double[]> rangeCell = setButton.sClicked
             .snapshot(latMin.text, latMax.text, longMin.text, longMax.text,
@@ -142,21 +163,45 @@ public class GpsGUI {
         Cell<String> rangeTextCell = rangeCell.map(r -> "Lat: " + r[0] + " to " + r[1] + "  Long: " + r[2] + " to " + r[3]);
         SLabel rangeLabel = new SLabel(rangeTextCell);
 
-        JPanel trackersPanel = new JPanel(new GridLayout(5,2));
-        JPanel bottomPanel = new JPanel(new GridLayout(0, 1));
-        bottomPanel.add(updateLabel);
-        bottomPanel.add(rangeLabel);
-        bottomPanel.add(filteredLabel);
-
+        JPanel trackersPanel = new JPanel(new GridLayout(2,5));
+        trackersPanel.setBorder(BorderFactory.createTitledBorder("Live trackers"));
+        JPanel distanceGrid = new JPanel(new GridLayout(2, 5));
+        distanceGrid.setBorder(BorderFactory.createTitledBorder("Distance travelled, last 5 minutes (events in range)"));
+        
+        
+        JPanel eventPanel = new JPanel(new GridLayout(0, 1));
+        eventPanel.setBorder(BorderFactory.createTitledBorder("Latest event"));
+        eventPanel.add(updateLabel);
+        
+        JPanel filteredPanel = new JPanel(new GridLayout(0, 1));
+        filteredPanel.setBorder(BorderFactory.createTitledBorder("Filtered display (events in range)"));
+        filteredPanel.add(filteredLabel);
+        JPanel filterPanel = new JPanel(new BorderLayout());
+        filterPanel.setBorder(BorderFactory.createTitledBorder("Filter"));
+        filterPanel.add(controlPanel, BorderLayout.CENTER);
+        filterPanel.add(rangeLabel, BorderLayout.SOUTH);
+        
+        
+        JPanel rightPanel = new JPanel(new GridLayout(2, 1));
+        rightPanel.add(eventPanel);
+        rightPanel.add(filteredPanel);
+        JPanel middlePanel = new JPanel(new GridLayout(1, 2));
+        middlePanel.add(filterPanel);
+        middlePanel.add(rightPanel);
         
         for(Stream<GpsEvent> s : streams) {
         	trackersPanel.add(trackerPanel(s, rangeCell));
+        	distanceGrid.add(distancePanel(s, rangeCell));
         }
         
-        frame.setSize(600,400);
+        JPanel centerPanel = new JPanel(new GridLayout(2, 1));
+        centerPanel.add(trackersPanel);
+        centerPanel.add(distanceGrid);
+        
+        frame.setSize(1100,500);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.add(trackersPanel, BorderLayout.CENTER);
-        frame.add(bottomPanel, BorderLayout.SOUTH);
+        frame.add(centerPanel, BorderLayout.CENTER);
+        frame.add(middlePanel, BorderLayout.SOUTH);
         frame.setVisible(true);
 	}
 
