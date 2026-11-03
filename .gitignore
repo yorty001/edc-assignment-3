@@ -11,3 +11,11 @@
 /GpsGUI.class
 /GpsGUI$1.class
 /GpsGUI_Test.class
+out/
+*.class
+Example.java
+GpsEvent.java
+GpsService.java
+gps.dat
+lib/
+swidgets/
