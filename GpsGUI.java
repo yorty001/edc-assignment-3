@@ -10,9 +10,10 @@ public class GpsGUI {
 	
 	
 	private static JPanel trackerPanel(Stream<GpsEvent> s, Cell<double[]> range) {     
-        Cell<String> numCell = s.map(ev -> ev.name).hold("waiting...");
-        Cell<String> latCell = s.map(ev -> "Lat: " + ev.latitude).hold("waiting...");
-        Cell<String> longCell = s.map(ev -> "Long: " + ev.longitude).hold("waiting...");
+        Cell<String[]> simplifiedCell = s.map(ev -> new String[] {ev.name, "" + ev.latitude, "" +  ev.longitude}).hold(new String[] {"waiting...", "waiting...", "waiting..."});       
+        Cell<String> numCell = simplifiedCell.map(v -> v[0]);
+        Cell<String> latCell = simplifiedCell.map(v -> "Lat: " + v[1]);
+        Cell<String> longCell = simplifiedCell.map(v -> "Long: " + v[2]);
         
         SLabel numLabel = new SLabel(numCell);
         SLabel latLabel = new SLabel(latCell);
@@ -31,15 +32,15 @@ public class GpsGUI {
 		return panel;
 	}
 
-    private static String eventToText(GpsEvent ev) {
+    static String eventToText(GpsEvent ev) {
         return ev.name + "," + ev.latitude + "," +ev.longitude + "," + ev.altitude;
     }
 
-    private static Stream<GpsEvent> inRange(Stream<GpsEvent> s, Cell<double[]> range) {
+    static Stream<GpsEvent> inRange(Stream<GpsEvent> s, Cell<double[]> range) {
         return s.snapshot(range, (ev, r) -> ev.latitude >= r[0] && ev.latitude <= r[1] && ev.longitude >= r[2] && ev.longitude <= r[3] ? ev : null).filter(x -> x != null);
         }
     	
-    private static double distanceMetres(GpsEvent a, GpsEvent b) {
+    static double distanceMetres(GpsEvent a, GpsEvent b) {
     	double metresPerDegree = 111320;
     	double dy = (b.latitude - a.latitude) * metresPerDegree;
     	double dx = (b.longitude - a.longitude) * metresPerDegree * Math.cos(Math.toRadians(b.latitude));
@@ -47,7 +48,7 @@ public class GpsGUI {
     	return Math.sqrt(dx * dx + dy*dy + dz*dz);
     }
     
-    private static Stream<Double> segments(Stream<GpsEvent> s, Cell<double[]> range) {
+    static Stream<Double> segments(Stream<GpsEvent> s, Cell<double[]> range) {
 		Stream<GpsEvent> metres = inRange(s, range).map(ev -> new GpsEvent(ev.name, ev.latitude, ev.longitude, ev.altitude * 0.3048));
 		Cell<GpsEvent> previous = metres.hold(null);
 		return metres.snapshot(previous, (cur, prev) -> prev == null ? null : distanceMetres(prev, cur))
@@ -55,7 +56,7 @@ public class GpsGUI {
     	
     }
     
-    private static Cell<String> distanceCell(Stream<GpsEvent> s, Cell<double[]> range) {
+    static Cell<String> distanceCell(Stream<GpsEvent> s, Cell<double[]> range) {
 		Stream<Double> segs = segments(s, range);
 		
 		Cell<ArrayList<double[]>> recent = segs.accum(new ArrayList<double[]>(), (seg, list) -> {
@@ -78,7 +79,7 @@ public class GpsGUI {
     	
     }
     
-    private static Cell<String> textWithClear(Stream<String> texts) {
+    static Cell<String> textWithClear(Stream<String> texts) {
     	StreamSink<String> clearSink = new StreamSink<>();
         Cell<String> lastText = texts.hold("");
         Timer timer = new Timer();
