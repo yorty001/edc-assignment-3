@@ -163,7 +163,7 @@ public class GpsGUI {
         
         Cell<String> rangeTextCell = rangeCell.map(r -> "Lat: " + r[0] + " to " + r[1] + "  Long: " + r[2] + " to " + r[3]);
         SLabel rangeLabel = new SLabel(rangeTextCell);
-
+ 
         JPanel trackersPanel = new JPanel(new GridLayout(2,5));
         trackersPanel.setBorder(BorderFactory.createTitledBorder("Live trackers"));
         JPanel distanceGrid = new JPanel(new GridLayout(2, 5));
